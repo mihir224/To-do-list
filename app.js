@@ -1,9 +1,8 @@
-//jshint esversion:6
-
 const express = require("express");
 const bodyParser = require("body-parser");
 const date = require(__dirname + "/date.js");
 const mongoose=require("mongoose");
+const _=require("lodash");
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -15,9 +14,8 @@ mongoose.connect("mongodb://localhost:27017/todolistDB", {useNewUrlParser: true}
 const itemsSchema={
   name:String
 } 
-const Item=mongoose.model( //using the singular name for the items collection
-   "Item",itemsSchema
-);
+const Item=mongoose.model("Item",itemsSchema); //using the singular name for the items collection
+
 const item1=new Item({
   name:"Welcome"
 });
@@ -74,7 +72,7 @@ const day = date.getDate();
 });
 
 app.post("/", function(req, res){
-
+  const day = date.getDate();
   const itemName  = req.body.newItem;
   const item=new Item({
     name:itemName
@@ -91,8 +89,6 @@ app.post("/", function(req, res){
       res.redirect("/"+listName); 
     });
   }
-  item.save();
-  res.redirect("/");
   // if (req.body.list === "Work") {
   //   workItems.push(item);
   //   res.redirect("/work");
@@ -103,7 +99,10 @@ app.post("/", function(req, res){
 });
 
 app.post("/delete",function(req,res){
+const day = date.getDate();
  const checkedItemId=req.body.checkbox; //returns the value of the checkbox input
+ const listName=req.body.listName;
+ if(listName===day){
   Item.findByIdAndRemove(checkedItemId,function(err){
     if(err){
       console.log(err);
@@ -113,10 +112,18 @@ app.post("/delete",function(req,res){
       res.redirect("/");
     }
   });
+ }else{
+   List.findOneAndUpdate({name: listName},{$pull: {items:{_id:checkedItemId}}},function(err,lists){ //returns the list with the specified name
+       if(!err){
+         res.redirect("/"+listName);
+       }
+      });
+ }
+  
  });
 
  app.get("/:listName",function(req,res){
-   const listName=req.params.listName;
+   const listName=_.capitalize(req.params.listName);
    List.findOne({name:listName},function(err, lists){
      if(!err){
        if(!lists){
